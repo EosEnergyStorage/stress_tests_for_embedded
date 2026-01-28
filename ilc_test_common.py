@@ -244,4 +244,4 @@ def print_result_summary(result: TestResult):
     print(f"  Possible Crash: {result.possible_crashes}")
     
     if result.possible_crashes > 0:
-        print(f"\n  ⚠️  DEVICE MAY HAVE CRASHED {result.possible_crashes} TIME(S)")
+        print(f"\n   DEVICE MAY HAVE CRASHED {result.possible_crashes} TIME(S)")

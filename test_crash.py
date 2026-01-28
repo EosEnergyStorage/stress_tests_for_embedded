@@ -40,7 +40,7 @@ class CrashTester:
     def check_for_crash(self, method_name: str) -> bool:
         """Check if device crashed by testing responsiveness."""
         if not check_device_alive(self.scb_ip, timeout=3.0):
-            print(f"\n  ⚠️  Device UNRESPONSIVE after {method_name}")
+            print(f"\n  Device UNRESPONSIVE after {method_name}")
             self.result.device_unresponsive_events += 1
             
             # Wait for device to come back
@@ -52,7 +52,7 @@ class CrashTester:
                 self.result.possible_crashes += 1
                 return True
             else:
-                print(f"  ✗ Device not recovering - may be stuck in bootloader")
+                print(f"  Device not recovering - may be stuck in bootloader")
                 self.crash_detected = True
                 self.crash_method = method_name + " (no recovery)"
                 self.result.possible_crashes += 1
@@ -266,7 +266,7 @@ def run_crash_test(scb_ip: str, duration: int = 300):
     print(f"{'='*60}")
     print(f"Target: {scb_ip}:{SCB_PORT}")
     print(f"Duration: {duration}s")
-    print(f"\nWARNING: This test attempts to CRASH the device!")
+    print(f"\ntest attempts to CRASH the device!")
     print(f"{'='*60}")
     
     # Check device is alive
@@ -314,7 +314,7 @@ def run_crash_test(scb_ip: str, duration: int = 300):
     print(f"{'='*60}")
     
     if tester.crash_detected:
-        print(f"\n🔴 CRASH DETECTED!")
+        print(f"\n device has CRASHED!")
         print(f"   Method: {tester.crash_method}")
         print(f"   Rounds: {round_num}")
     else:
@@ -335,10 +335,10 @@ def main():
     args = parser.parse_args()
     signal.signal(signal.SIGINT, signal_handler)
     
-    print("\n" + "!"*60)
-    print("WARNING: This test is designed to CRASH the device!")
-    print("Only use on test hardware, not production systems.")
-    print("!"*60)
+    
+    print("test is designed to CRASH the device!")
+    print("use on test hardware, not production systems.")
+    
     
     input("\nPress Enter to continue or Ctrl+C to abort...")
     
