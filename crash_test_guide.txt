@@ -1,0 +1,68 @@
+SCB Crash Test 
+
+
+Test detects crashes through TCP:
+
+If command is sent and we get a response then device is alive
+Send command, no response for several attempts then device might be dead
+There is a wait up to 60 seconds for device to come back
+If it recovers then crash is confirmed and it rebooted.
+If it doesn't recover then it is stuck in bootloader, needs manual reset
+
+
+Ways of trying to get it to crash
+
+1. concurrent flood
+   Opens 5 TCP connections and sends commands on all of them simultaneously.
+   
+   Suspected bug location: tcp_server_recv() in tcp_server.c,   
+   
+   while (parser_running) {}
+   
+   if two connections receive data at the same time, connection 1 starts parsing and sets parser_running=true.
+   connection 2 receives data, enters tcp_server_recv(), and hits this while loop.
+   Connection 2 is stuck waiting for 1 to finish, but the problem is this spin loop doesn't have a timeout, feed the watchdog, or yield to other tasks
+   
+   If connection 1 takes more than 3.4 seconds (for say waiting for CAN responses, or the network is slow), the IWDG gets triggered and resets the SCB board.
+   
+2. connection overflow  
+   test opens more connections than MAX_CLIENTS (5), sends data, closes them
+   in random order, repeats.
+   
+   functions it's testing 
+   tcp_server_accept()
+   tcp_server_connection_close()
+   tcp_server_error() 
+   
+   in tcp_server_accept():
+   the call to add_client_entry() is able to create duplicate entries if the table assignment earlier in the function already succeeded. 
+   Double-adding the same connection corrupts the table.
+   
+   In tcp_server_connection_close() and tcp_server_error():
+   a call to remove_client_entry() was commented out in one path but not the other. So depending on the way a connection closed normal or error removing the entry was different.
+   The client_table keeps the entries that should have been removed.    
+   At some point, the table fills with connections no longer relevant, we try to dereference a bad pointer,
+   and that would lead to a hard-fault. The whole application crashes and the board show via the amber LED that we are in the bootloader. 
+   
+
+3. rapid connect
+   test opens a connection, sends an incomplete packet, immediately closes. Does this in rapid succession.
+   
+   testing 
+   tcp_server_parse_cmd()
+   
+   if pbuf_alloc() fails, it returns false, but doesn't free es->p.
+   The application stack pointer is set to a position as if the data is there. This causes a memory leak.
+   
+   when the processed bytes are removed, pbuf_free(ptr) call,  but if es->p points into that same chain, freeing ptr might invalidate es->p. 
+   
+   These are the types of issues that compound. We've gone up to 8 days without a crash. The rapid succession is for 
+   exhausting of the memory and increasing odds of hitting a corrupted pointer.
+
+
+4. combined stress
+   Makes use of the multithreading available in python to run all the above tests at the same time from multiple threads.
+   
+   This is to catch race conditions which are timing-dependent and hard to reproduce with single-threaded testing.
+   
+
